@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(uuid())
+  username  String     @unique
+  email     String     @unique
+  password  String
+  bio       String?    @default("Ready to learn and share knowledge on AskSphere!")
+  points    Int        @default(50)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  questions Question[]
+  answers   Answer[]
+
+  @@map("users")
+}
+
+model Question {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  subject     String   // e.g. Mathematics, Science, History, English, Coding, Other
+  pointsAward Int      @default(10) // Points deducted from asker and awarded to helper
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+
+  @@map("questions")
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  content    String
+  isAccepted Boolean  @default(false) // Brainliest / Accepted Answer
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}
