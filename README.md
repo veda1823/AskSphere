@@ -106,6 +106,6 @@ AskSphere/
 
 - [x] **Milestone 1**: Project Foundation (Client + Server + Prisma Schema + Health Check)
 - [x] **Milestone 2**: Authentication & User System (JWT, bcrypt, Login/Register pages, Protected routes)
-- [ ] **Milestone 3**: Question Feed & Question Details (Posting questions, subject filters, detail view)
+- [x] **Milestone 3**: Question Feed & Question Details (Posting questions, subject filters, detail view)
 - [ ] **Milestone 4**: Answering & Gamification (Posting answers, Brainliest accepted answer, points logic)
 - [ ] **Milestone 5**: Profile Dashboard, Search & Final Polish
