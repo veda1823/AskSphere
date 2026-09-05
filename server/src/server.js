@@ -16,6 +16,7 @@ app.use(express.json());
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const questionRoutes = require('./routes/questionRoutes');
+const answerRoutes = require('./routes/answerRoutes');
 
 // Basic health check endpoint
 app.get('/api/health', (req, res) => {
@@ -31,6 +32,9 @@ app.use('/api/auth', authRoutes);
 
 // Questions routes
 app.use('/api/questions', questionRoutes);
+
+// Answers routes
+app.use('/api', answerRoutes);
 
 // 404 Route Handler
 app.use((req, res, next) => {

@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import API from '../services/api';
-import { Award, Clock, User, ArrowLeft, CheckCircle2, MessageSquare, Sparkles } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { 
+  Award, Clock, User, ArrowLeft, MessageSquare, 
+  Sparkles, Send, CheckCircle2, AlertCircle, LogIn 
+} from 'lucide-react';
 
 const SUBJECT_COLORS = {
   math: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -14,9 +18,20 @@ const SUBJECT_COLORS = {
 
 export default function QuestionDetail() {
   const { id } = useParams();
+  const { user, updatePoints } = useAuth();
+
   const [question, setQuestion] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Answer submission state
+  const [answerContent, setAnswerContent] = useState('');
+  const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const [answerError, setAnswerError] = useState('');
+  const [answerSuccess, setAnswerSuccess] = useState('');
+
+  // Brainliest marking state
+  const [acceptingId, setAcceptingId] = useState(null);
 
   useEffect(() => {
     const fetchQuestion = async () => {
@@ -35,6 +50,67 @@ export default function QuestionDetail() {
 
     fetchQuestion();
   }, [id]);
+
+  // Handle posting a new answer
+  const handlePostAnswer = async (e) => {
+    e.preventDefault();
+    setAnswerError('');
+    setAnswerSuccess('');
+
+    if (answerContent.trim().length < 10) {
+      setAnswerError('Your answer must be at least 10 characters long with helpful explanations.');
+      return;
+    }
+
+    try {
+      setSubmittingAnswer(true);
+      const res = await API.post(`/questions/${id}/answers`, {
+        content: answerContent.trim(),
+      });
+
+      if (res.data.success) {
+        // Append new answer to state
+        setQuestion((prev) => ({
+          ...prev,
+          answers: [...prev.answers, res.data.answer],
+        }));
+
+        // Update helper's points balance in navbar
+        if (res.data.newPoints !== undefined) {
+          updatePoints(res.data.newPoints);
+        }
+
+        setAnswerSuccess(res.data.message || 'Answer posted successfully!');
+        setAnswerContent('');
+      }
+    } catch (err) {
+      setAnswerError(err.response?.data?.message || 'Failed to post answer.');
+    } finally {
+      setSubmittingAnswer(false);
+    }
+  };
+
+  // Handle author marking an answer as Brainliest
+  const handleAcceptAnswer = async (answerId) => {
+    try {
+      setAcceptingId(answerId);
+      const res = await API.patch(`/answers/${answerId}/accept`);
+
+      if (res.data.success) {
+        // Update answers locally: set chosen answer as accepted and others as not
+        setQuestion((prev) => ({
+          ...prev,
+          answers: prev.answers.map((ans) =>
+            ans.id === answerId ? { ...ans, isAccepted: true } : { ...ans, isAccepted: false }
+          ),
+        }));
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to mark as Brainliest.');
+    } finally {
+      setAcceptingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -60,6 +136,10 @@ export default function QuestionDetail() {
       </div>
     );
   }
+
+  const isAuthor = user && user.id === question.authorId;
+  const hasAlreadyAnswered = user && question.answers?.some((a) => a.authorId === user.id);
+  const hasBrainliest = question.answers?.some((a) => a.isAccepted);
 
   const subjectKey = (question.subject || 'other').toLowerCase();
   const badgeStyle = SUBJECT_COLORS[subjectKey] || SUBJECT_COLORS.other;
@@ -114,7 +194,7 @@ export default function QuestionDetail() {
             </div>
             <div>
               <span className="font-semibold text-slate-800 block text-sm">
-                {question.author?.username}
+                {question.author?.username} {isAuthor && <span className="text-indigo-600 font-normal">(You)</span>}
               </span>
               <span className="text-slate-400">Asked on {formattedDate}</span>
             </div>
@@ -129,12 +209,18 @@ export default function QuestionDetail() {
       </div>
 
       {/* Answers Section */}
-      <div className="space-y-6">
+      <div className="space-y-6 mb-12">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-indigo-600" />
             <span>Answers ({question.answers?.length || 0})</span>
           </h2>
+          {hasBrainliest && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              Brainliest Chosen
+            </span>
+          )}
         </div>
 
         {question.answers && question.answers.length > 0 ? (
@@ -144,31 +230,48 @@ export default function QuestionDetail() {
                 key={answer.id}
                 className={`bg-white rounded-2xl border p-6 transition-all ${
                   answer.isAccepted
-                    ? 'border-amber-300 ring-2 ring-amber-400/20 shadow-xs'
+                    ? 'border-amber-400 bg-amber-50/20 ring-2 ring-amber-400/30 shadow-xs'
                     : 'border-slate-200'
                 }`}
               >
                 {/* Accepted Answer Banner */}
                 {answer.isAccepted && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold uppercase tracking-wider mb-3">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                    Brainliest Answer
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold uppercase tracking-wider mb-4 shadow-2xs">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    ✨ Brainliest / Best Answer
                   </div>
                 )}
 
                 {/* Content */}
-                <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-line mb-4">
+                <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-line mb-5">
                   {answer.content}
                 </p>
 
-                {/* Answer Author */}
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-3 border-t border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <User className="w-3.5 h-3.5 text-slate-500" />
-                    <span className="font-semibold text-slate-700">{answer.author?.username}</span>
+                {/* Footer with Author & Brainliest Action Button */}
+                <div className="flex items-center justify-between text-xs pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <User className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="font-semibold text-slate-700">
+                      {answer.author?.username}
+                      {user && user.id === answer.authorId && ' (You)'}
+                    </span>
+                    <span>•</span>
+                    <span>{new Date(answer.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <span>{new Date(answer.createdAt).toLocaleDateString()}</span>
+
+                  {/* Brainliest Button (Only shown to Question Author) */}
+                  {isAuthor && !answer.isAccepted && (
+                    <button
+                      onClick={() => handleAcceptAnswer(answer.id)}
+                      disabled={acceptingId === answer.id}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl font-bold text-xs shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{acceptingId === answer.id ? 'Marking...' : 'Mark as Brainliest (+15 pts)'}</span>
+                    </button>
+                  )}
                 </div>
+
               </div>
             ))}
           </div>
@@ -179,9 +282,106 @@ export default function QuestionDetail() {
             </div>
             <h3 className="text-base font-bold text-slate-900">No answers yet</h3>
             <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto">
-              Be the first peer to provide a helpful answer and earn the <strong>+{question.pointsAward} points bounty</strong>!
+              Be the first peer to provide a helpful answer and claim the <strong>+{question.pointsAward} points bounty</strong>!
             </p>
           </div>
+        )}
+      </div>
+
+      {/* Answer Submission Box */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+        <h3 className="text-lg font-bold text-slate-900 mb-2 flex items-center gap-2">
+          <span>Your Answer</span>
+          <span className="text-xs font-semibold px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded-full">
+            Reward: +{question.pointsAward} pts
+          </span>
+        </h3>
+
+        {!user ? (
+          /* Guest CTA */
+          <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 text-center mt-4">
+            <p className="text-sm text-slate-700 font-medium mb-3">
+              Know the solution? Log in to help this student and earn <strong>+{question.pointsAward} points</strong>!
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <Link
+                to="/login"
+                state={{ from: { pathname: `/questions/${id}` } }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-xs transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Log In to Answer</span>
+              </Link>
+              <Link
+                to="/register"
+                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-sm font-medium rounded-xl transition-colors"
+              >
+                Create an Account
+              </Link>
+            </div>
+          </div>
+        ) : isAuthor ? (
+          /* Question Author Notice */
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm mt-3">
+            You asked this question. When peers submit answers, you can review and select the <strong>Brainliest</strong> answer above!
+          </div>
+        ) : hasAlreadyAnswered ? (
+          /* Already Answered Notice */
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2 mt-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>You have already submitted an answer for this question. Thank you for contributing to AskSphere!</span>
+          </div>
+        ) : (
+          /* Active Answer Form */
+          <form onSubmit={handlePostAnswer} className="mt-4 space-y-4">
+            {answerError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-2.5">
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <span>{answerError}</span>
+              </div>
+            )}
+
+            {answerSuccess && (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <span>{answerSuccess}</span>
+              </div>
+            )}
+
+            <div>
+              <textarea
+                required
+                rows={5}
+                value={answerContent}
+                onChange={(e) => setAnswerContent(e.target.value)}
+                placeholder="Write your step-by-step answer, formulas, or explanations here..."
+                className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all"
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Provide clear, thorough explanations. Getting marked as <strong>Brainliest</strong> awards you a <strong>+15 points bonus</strong>!
+              </p>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={submittingAnswer || answerContent.trim().length < 10}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {submittingAnswer ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    <span>Submit Answer (+{question.pointsAward} pts)</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         )}
       </div>
 
