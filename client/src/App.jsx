@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import AskQuestion from './pages/AskQuestion';
 import QuestionDetail from './pages/QuestionDetail';
+import Profile from './pages/Profile';
 
 export default function App() {
   return (
@@ -24,8 +25,9 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/questions/:id" element={<QuestionDetail />} />
+              <Route path="/profile/:id" element={<Profile />} />
 
-              {/* Protected Routes (Require Login) */}
+              {/* Protected Routes (Require Authentication) */}
               <Route
                 path="/ask"
                 element={
@@ -34,7 +36,14 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              {/* Future routes: /profile */}
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </main>
           <Footer />

@@ -1,10 +1,19 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { HelpCircle, PlusCircle, User, Award, Search, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [navSearch, setNavSearch] = useState('');
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (navSearch.trim()) {
+      navigate(`/?search=${encodeURIComponent(navSearch.trim())}`);
+    }
+  };
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-xs">
@@ -18,17 +27,19 @@ export default function Navbar() {
           <span className="text-slate-900">Ask<span className="text-indigo-600">Sphere</span></span>
         </Link>
 
-        {/* Search Bar Placeholder */}
-        <div className="hidden md:flex flex-1 max-w-md mx-4">
+        {/* Search Bar */}
+        <form onSubmit={handleSearchSubmit} className="hidden md:flex flex-1 max-w-md mx-4">
           <div className="relative w-full">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input 
               type="text" 
-              placeholder="Search homework questions, subjects, topics..."
+              value={navSearch}
+              onChange={(e) => setNavSearch(e.target.value)}
+              placeholder="Search homework questions, topics, subjects..."
               className="w-full bg-slate-100 text-sm rounded-full pl-10 pr-4 py-2 border border-transparent focus:border-indigo-500 focus:bg-white focus:outline-none transition-all"
             />
           </div>
-        </div>
+        </form>
 
         {/* Action Buttons & Auth */}
         <div className="flex items-center gap-3">
@@ -43,10 +54,14 @@ export default function Navbar() {
           {user ? (
             <div className="flex items-center gap-3">
               {/* Points Pill */}
-              <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-3 py-1.5 rounded-full shadow-2xs">
+              <Link
+                to="/profile"
+                className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold px-3 py-1.5 rounded-full shadow-2xs transition-colors"
+                title="View your points & reputation"
+              >
                 <Award className="w-3.5 h-3.5 text-amber-500" />
                 <span>{user.points} pts</span>
-              </div>
+              </Link>
 
               {/* User Link */}
               <Link
@@ -61,7 +76,7 @@ export default function Navbar() {
               {/* Logout Button */}
               <button
                 onClick={logout}
-                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors cursor-pointer"
                 title="Log Out"
               >
                 <LogOut className="w-4 h-4" />
