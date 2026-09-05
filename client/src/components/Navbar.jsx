@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { HelpCircle, PlusCircle, User, Award, Search } from 'lucide-react';
+import { HelpCircle, PlusCircle, User, Award, Search, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
-  // Placeholder user state for Milestone 1; Milestone 2 will wire AuthContext
-  const user = null; // Set to { username: "Learner123", points: 50 } once logged in
+  const { user, logout } = useAuth();
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-xs">
@@ -42,16 +42,30 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-2.5 py-1.5 rounded-full">
+              {/* Points Pill */}
+              <div className="flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-3 py-1.5 rounded-full shadow-2xs">
                 <Award className="w-3.5 h-3.5 text-amber-500" />
                 <span>{user.points} pts</span>
               </div>
+
+              {/* User Link */}
               <Link
                 to="/profile"
-                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center font-medium text-sm transition-colors border border-slate-300"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full font-medium text-xs transition-colors border border-slate-200"
+                title="View Profile"
               >
-                <User className="w-4 h-4" />
+                <User className="w-3.5 h-3.5 text-slate-500" />
+                <span className="font-semibold">{user.username}</span>
               </Link>
+
+              {/* Logout Button */}
+              <button
+                onClick={logout}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
+                title="Log Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm font-medium">
@@ -63,7 +77,7 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/register"
-                className="px-3.5 py-1.5 border border-slate-300 hover:border-slate-400 text-slate-800 rounded-full transition-colors"
+                className="px-3.5 py-1.5 border border-indigo-200 hover:border-indigo-400 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 rounded-full transition-colors"
               >
                 Sign Up
               </Link>

@@ -13,6 +13,9 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Routes
+const authRoutes = require('./routes/authRoutes');
+
 // Basic health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({
@@ -21,6 +24,9 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Authentication routes
+app.use('/api/auth', authRoutes);
 
 // 404 Route Handler
 app.use((req, res, next) => {
